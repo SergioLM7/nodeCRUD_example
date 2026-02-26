@@ -1,7 +1,10 @@
 require("dotenv").config();
 
 const express = require("express");
-const pool = require("./db");
+
+//Importamos el objeto repo que contiene los métodos de acceso a datos (getAll, getById, create, update, remove)
+//El repo se encarga de exportar el módulo correcto según la variable de entorno DATA_ACCESS
+const repo = require("./repository");
 
 //Crear la aplicación Express que lanza el servidor
 const app = express();
@@ -35,8 +38,8 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 app.get("/componentes", async (req, res) => {
 
     try {
-        const result = await pool.query("SELECT * FROM componentes ORDER BY id ASC");
-        res.json(result.rows);
+        const result = await repo.getAll();
+        res.json(Array.isArray(result) ? result : []);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Error al listar componentes", detalle: err.message });
@@ -49,11 +52,11 @@ app.get("/componentes/:id", async (req, res) => {
     const {id} = req.params;
 
     try {
-        const result = await pool.query("SELECT * FROM componentes WHERE id = $1", [id])
+        const result = await repo.getById(id);
 
-        if(result.rowCount === 0) return res.status(404).json({error: "Componente no encontrado"});
+        if(!result) return res.status(404).json({error: "Componente no encontrado"});
 
-        res.json(result.rows[0]);
+        res.json(result);
 
     } catch (err) {
     console.error(err);
@@ -70,13 +73,9 @@ app.post("/componentes", async (req, res) => {
     if(!nombre || !tipo) return res.status(400).json({error: "Campos obligatorios: nombre y tipo"});
 
     try {
-
-        const result = await pool.query(
-            `INSERT INTO componentes (nombre, tipo, marca, precio, stock) VALUES ($1, $2, $3, $4, $5)
-            RETURNING *`, [nombre, tipo, marca, precio, stock]
-        );
+        const result = await repo.create(req.body);
         
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(result);
 
     } catch (err) {
         console.error(err);
@@ -87,31 +86,18 @@ app.post("/componentes", async (req, res) => {
 app.put("/componentes/:id", async (req,res) => {
 
     const { id } = req.params;
-    const { nombre, tipo, marca, precio, stock } = req.body;
+    const { nombre, tipo } = req.body;
 
     try {
-
         if(!nombre || !tipo) return res.status(400).json({error: "Campos obligatorios: nombre y tipo"});
 
-        const exists = await pool.query("SELECT * FROM componentes WHERE id = $1", [id])
+        const exists = await repo.getById(id);
 
-        if(exists.rows.length === 0) return res.status(404).json({error: "Componente no encontrado"});
+        if(!exists) return res.status(404).json({error: "Componente no encontrado"});
 
-        //Si algunos de los campos vienen vacíos, metemos null como valor default (doble comprobación) 
-        // (si no, daría error en el caso de que un campo viniera vacío)
-        const result  = await pool.query(
-            `UPDATE componentes
-            SET 
-                nombre = COALESCE($1, nombre),
-                tipo = COALESCE($2, tipo),
-                marca = COALESCE($3, marca),
-                precio = COALESCE($4, precio),
-                stock = COALESCE($5, stock)
-            WHERE id = $6
-            RETURNING * `, [nombre ?? null, tipo ?? null, marca ?? null, precio ?? null, stock ?? null, id]
-        );
+        const result  = await repo.update(id, req.body);
 
-        res.json(result.rows[0]);
+        res.json(result);
 
     } catch (err) {
         console.error(err);
@@ -123,11 +109,9 @@ app.delete("/componentes/:id", async (req,res) => {
     const { id } = req.params;
 
     try {
-        
-        //En POSTGRESQL se devuelve el registro tal cual estaba antes de borrarse
-        const result = await pool.query("DELETE FROM componentes WHERE id=$1 RETURNING *", [id]);
+        const result = await repo.delete(id);
 
-        if (result.rows.length === 0) return res.status(404).json({error: "Componente no encontrado"});
+        if (!result) return res.status(404).json({error: "Componente no encontrado"});
 
         res.status(204).send();
 

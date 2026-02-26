@@ -8,13 +8,22 @@
     "dev": "node --watch src/app.js",
     "start": "node src/app.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SergioLM7/nodeCRUD_example.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@prisma/client": "^6.19.2",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "pg": "^8.18.0"
+  },
+  "devDependencies": {
+    "-": "^0.0.1",
+    "prisma": "^6.19.2"
   }
 }
