@@ -1,4 +1,4 @@
-const pool = require('../db/pg.pool');
+const pool = require('../db');
 
 const TABLE = 'componentes';
 
