@@ -49,17 +49,19 @@ app.get("/componentes", async (req, res) => {
 //GET /componentes/:id (parametro id)
 //Devuelve el componente con el id que llega como param por la URL
 app.get("/componentes/:id", async (req, res) => {
-    const {id} = req.params;
+    const id = Number(req.params.id) || req.params.id;
+
+    if(Number.isNaN(id)) return res.status(400).json({error: "ID inválido"});
 
     try {
-        const result = await repo.getById(id);
+        const item = await repo.getById(id);
 
-        if(!result) return res.status(404).json({error: "Componente no encontrado"});
+        if(!item) return res.status(404).json({error: "Componente no encontrado"});
 
-        res.json(result);
+        res.json(item);
 
     } catch (err) {
-    console.error(err);
+        console.error(err);
         res.status(500).json({ error: "Error al obtener el componente", detalle: err.message });
     }
 
@@ -73,7 +75,7 @@ app.post("/componentes", async (req, res) => {
     if(!nombre || !tipo) return res.status(400).json({error: "Campos obligatorios: nombre y tipo"});
 
     try {
-        const result = await repo.create(req.body);
+        const result = await repo.create({nombre, tipo, marca, precio, stock});
         
         res.status(201).json(result);
 
@@ -85,17 +87,17 @@ app.post("/componentes", async (req, res) => {
 
 app.put("/componentes/:id", async (req,res) => {
 
-    const { id } = req.params;
-    const { nombre, tipo } = req.body;
+    const id = Number(req.params.id) || req.params.id;
+    if(Number.isNaN(id)) return res.status(400).json({error: "ID inválido"});
+
+    const { nombre, tipo, marca, precio, stock } = req.body;
 
     try {
         if(!nombre || !tipo) return res.status(400).json({error: "Campos obligatorios: nombre y tipo"});
 
-        const exists = await repo.getById(id);
+        const result  = await repo.update(id, {nombre, tipo, marca, precio, stock});
 
-        if(!exists) return res.status(404).json({error: "Componente no encontrado"});
-
-        const result  = await repo.update(id, req.body);
+        if(!result) return res.status(404).json({error: "Componente no encontrado"});
 
         res.json(result);
 
@@ -106,10 +108,11 @@ app.put("/componentes/:id", async (req,res) => {
 });
 
 app.delete("/componentes/:id", async (req,res) => {
-    const { id } = req.params;
+    const id = Number(req.params.id) || req.params.id;
+    if(Number.isNaN(id)) return res.status(400).json({error: "ID inválido"});
 
     try {
-        const result = await repo.delete(id);
+        const result = await repo.remove(id);
 
         if (!result) return res.status(404).json({error: "Componente no encontrado"});
 
